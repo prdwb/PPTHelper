@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -205,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
-    public String OCR(String base64) {
+    public int OCR(String base64) {
         String httpUrl = "http://apis.baidu.com/apistore/idlocr/ocr";
         String httpArg = "fromdevice=android&clientip=222.26.211.5&detecttype=Recognize&languagetype=CHN_ENG&imagetype=1&image=" + base64;
         //Log.i("httpArg", httpArg);
@@ -224,20 +225,21 @@ public class MainActivity extends AppCompatActivity {
                     Log.i("result", errMsg);
                     Log.i("result", word);
                     Log.i("result", "parse complete");
-                    return word;
+                    //return word;
+                    return OCR_SUCCESS;
                 } else {
 
                     Log.i("result", errMsg);
-                    return "OCR Fail";
+                    return OCR_FAIL;
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
-                return "OCR Fail";
+                return OCR_FAIL;
             }
         } else {
             Toast.makeText(this, "fail", Toast.LENGTH_LONG).show();
             Log.i("result", "null");
-            return "Request Fail";
+            return OCR_REQUEST_FAIL;
         }
     }
 
@@ -303,10 +305,10 @@ public class MainActivity extends AppCompatActivity {
         //OCR(base64);
     }
 
-    public String tokenizer(String word) {
+    public int tokenizer(String word) {
         if(word == null){
             Log.i("tokenizer", "input word is null");
-            return "error";
+                return TOKENIZER_ERROR;
         }else {
             String httpUrl = "http://apis.baidu.com/apistore/pullword/words";
             String wordString = null;
@@ -318,7 +320,7 @@ public class MainActivity extends AppCompatActivity {
             String httpArg = "source=" + wordString + "&param1=0&param2=0.8";
             String jsonResult = requestTokenizer(httpUrl, httpArg);
             if(jsonResult.equals("Request Fail")){
-                return "Request Fail";
+                return TOKENIZER_REQUEST_FAIL;
             }
             if (jsonResult != null) {
                 //Log.i("tokenizer", jsonResult);
@@ -333,14 +335,14 @@ public class MainActivity extends AppCompatActivity {
                     }
                     mgr.add(pictures);
                     Log.i("tokenizer", "success");
-                    return "success";
+                    return TOKENIZER_SUCCESS;
                 }else{
                     Log.i("tokenizer", "server return error");
-                    return "server return error";
+                    return TOKENIZER_SERVER_RETURN_ERROR;
                 }
             } else {
                 Log.i("tokenizer", "fail");
-                return "error";
+                return TOKENIZER_ERROR;
             }
         }
     }
@@ -375,53 +377,70 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
+    public static final int OCR_REQUEST_FAIL = 11;
+    public static final int OCR_FAIL = 12;
+    public static final int OCR_SUCCESS = 13;
+    public static final int TOKENIZER_ERROR = 14;
+    public static final int TOKENIZER_SERVER_RETURN_ERROR = 15;
+    public static final int TOKENIZER_REQUEST_FAIL = 16;
+    public static final int TOKENIZER_SUCCESS = 17;
 
-    Handler handlerOCR = new Handler(){
+    static class MyHandler extends Handler{
+        WeakReference<MainActivity> mActivity;
+
+        MyHandler(MainActivity activity) {
+            mActivity = new WeakReference<MainActivity>(activity);
+        }
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
-            Bundle data = msg.getData();
-            String val = data.getString("value");
-            if(val.equals("Request Fail")){
-                Toast.makeText(MainActivity.this, "服务器忙，正在重试", Toast.LENGTH_LONG).show();
-                new Thread(runnableOCR).start();
-            }else if(val.equals("OCR Fail")){
-                Toast.makeText(MainActivity.this, "未识别出字符，图片不会添加标签", Toast.LENGTH_LONG).show();
-            }else{
-                //Toast.makeText(MainActivity.this, "识别成功", Toast.LENGTH_LONG).show();
-                new Thread(runnableTokenizer).start();
-            }
-        }
-    };
+            MainActivity theActivity = mActivity.get();
+            switch(msg.what) {
+                case OCR_REQUEST_FAIL: {
+                    Toast.makeText(theActivity, "服务器忙，正在重试", Toast.LENGTH_LONG).show();
+                    new Thread(theActivity.runnableOCR).start();
+                    break;
+                }
+                case OCR_FAIL: {
+                    Toast.makeText(theActivity, "未识别出字符，图片不会添加标签", Toast.LENGTH_LONG).show();
+                    break;
+                }
+                case OCR_SUCCESS: {
+                    new Thread(theActivity.runnableTokenizer).start();
+                    break;
+                }
+                case TOKENIZER_ERROR: {
+                    Toast.makeText(theActivity, "未识别出字符，图片不会添加标签", Toast.LENGTH_LONG).show();
+                    break;
+                }
+                case TOKENIZER_SERVER_RETURN_ERROR: {
+                    Toast.makeText(theActivity, "识别失败，图片标签为“error”", Toast.LENGTH_LONG).show();
+                    break;
+                }
+                case TOKENIZER_REQUEST_FAIL: {
+                    Toast.makeText(theActivity, "服务器忙，正在重试", Toast.LENGTH_LONG).show();
+                    new Thread(theActivity.runnableTokenizer).start();
+                    break;
+                }
+                case TOKENIZER_SUCCESS: {
+                    Toast.makeText(theActivity, "识别成功，图片已添加标签", Toast.LENGTH_LONG).show();
+                    break;
+                }
 
-    Handler handlerTokenizer = new Handler(){
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            Bundle data = msg.getData();
-            String val = data.getString("value");
-            if(val.equals("error")) {
-                Toast.makeText(MainActivity.this, "未识别出字符，图片不会添加标签", Toast.LENGTH_LONG).show();
-            }else if(val.equals("server return error")) {
-                Toast.makeText(MainActivity.this, "识别失败，图片标签为“error”", Toast.LENGTH_LONG).show();
-            }else if(val.equals("Request Fail")){
-                Toast.makeText(MainActivity.this, "服务器忙，正在重试", Toast.LENGTH_LONG).show();
-                new Thread(runnableTokenizer).start();
-            }else{
-                Toast.makeText(MainActivity.this, "识别成功，图片已添加标签", Toast.LENGTH_LONG).show();
+
             }
+
         }
-    };
+    }
+    
+    MyHandler handler = new MyHandler(this);
 
     Runnable runnableOCR = new Runnable() {
         @Override
         public void run() {
-            word = OCR(base64);
             Message msg = new Message();
-            Bundle data = new Bundle();
-            data.putString("value", word);
-            msg.setData(data);
-            handlerOCR.sendMessage(msg);
+            msg.what = OCR(base64);
+            handler.sendMessage(msg);
 
         }
     };
@@ -429,12 +448,9 @@ public class MainActivity extends AppCompatActivity {
     Runnable runnableTokenizer = new Runnable() {
         @Override
         public void run() {
-            String result = tokenizer(word);
             Message msg = new Message();
-            Bundle data = new Bundle();
-            data.putString("value", result);
-            msg.setData(data);
-            handlerTokenizer.sendMessage(msg);
+            msg.what = tokenizer(word);
+            handler.sendMessage(msg);
         }
     };
 
@@ -466,6 +482,7 @@ public class MainActivity extends AppCompatActivity {
 //        Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
 //        jpgView.setImageBitmap(bitmap);
     }
+
 
 
 }
