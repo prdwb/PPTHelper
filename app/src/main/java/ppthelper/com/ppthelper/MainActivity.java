@@ -10,7 +10,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
-import android.text.format.Time;
 import android.util.Base64;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -42,6 +41,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +49,6 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private DBManager mgr;
-    //ListView listView = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,29 +56,16 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         //listView = (ListView) findViewById(R.id.listView);
         mgr = new DBManager(this);
-//        final Button button2 = (Button) findViewById(R.id.button2);
-//        button2.setOnClickListener(new View.OnClickListener() {
-//            public void onClick(View v) {
-//                processPhoto(imageFilePath);
-//            }
-//        });
-//        final Button button3 = (Button) findViewById(R.id.button3);
-//        button3.setOnClickListener(new View.OnClickListener() {
-//            public void onClick(View v) {
-//                new Thread(runnableOCR).start();
-//            }
-//        });
-//        final Button button4 = (Button) findViewById(R.id.button4);
-//        button4.setOnClickListener(new View.OnClickListener() {
-//            public void onClick(View v) {
-//                new Thread(runnableTokenizer).start();
-//            }
-//        });
+
         final EditText editText = (EditText) findViewById(R.id.search);
         final Button button5 = (Button) findViewById(R.id.button5);
         button5.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                query(v, editText.getText().toString());
+                String keyword = editText.getText().toString();
+                if(keyword.equals(""))
+                    query(v);
+                else
+                    query(v, keyword);
             }
         });
 
@@ -126,6 +112,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public String imageFilePath = "";
+    public String compressedImageFilePath = "";
     public String filename = "";
     public String appHome = Environment.getExternalStorageDirectory().getAbsolutePath() + "/PPTHelper";
     public String base64 = "";
@@ -135,29 +122,26 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent();
         intent.setAction("android.media.action.IMAGE_CAPTURE");
         intent.addCategory("android.intent.category.DEFAULT");
-        Time t=new Time();
-        t.setToNow();
-        int year=t.year;
-        int month=t.month;
-        int day=t.monthDay;
-        int hour=t.hour;
-        int minute=t.minute;
-        int second=t.second;
-        filename=""+year+month+day+hour+minute+second;
-        //String filename = "0919.jpg";
-        //Log.i(TAG, "" + year + month + day + hour + minute + second);
+
+        Calendar calendar = Calendar.getInstance();
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONTH);
+        int date = calendar.get(Calendar.DATE);
+        int hour = calendar.get(Calendar.HOUR);
+        int minute = calendar.get(Calendar.MINUTE);
+        int second = calendar.get(Calendar.SECOND);
+        filename = "" + year + month + date + hour + minute + second;
 
         File dir = new File(appHome);
         if (!dir.exists()){
             dir.mkdir();
         }
         imageFilePath = appHome + "/" + filename + ".jpg";
+        compressedImageFilePath = appHome + "/" + filename + "_c" + ".jpg";
         File file = new File(imageFilePath);
         Uri uri = Uri.fromFile(file);
         intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
-        //this.startActivity(intent);
         startActivityForResult(intent, 1);
-
     }
 
     @Override
@@ -167,7 +151,6 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "图片已保存到:\n" + imageFilePath, Toast.LENGTH_LONG).show();
             processPhoto(imageFilePath);
             new Thread(runnableOCR).start();
-            //new Thread(runnableTokenizer).start();
         }
 
     }
@@ -245,23 +228,14 @@ public class MainActivity extends AppCompatActivity {
 
     public void compressPhoto(String imageFilePath){
         final BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inJustDecodeBounds = true;
-        BitmapFactory.decodeFile(imageFilePath, options);
-        // Calculate inSampleSize
-        options.inSampleSize = 4;
-
-        // Decode bitmap with inSampleSize set
-        options.inJustDecodeBounds = false;
-
+        options.inSampleSize = 3;
         Bitmap bm = BitmapFactory.decodeFile(imageFilePath, options);
 
-        File f = new File(imageFilePath);
-        if (f.exists()) {
-            f.delete();
-        }
+        File f = new File(compressedImageFilePath);
+
         try {
             FileOutputStream out = new FileOutputStream(f);
-            bm.compress(Bitmap.CompressFormat.JPEG, 50, out);
+            bm.compress(Bitmap.CompressFormat.JPEG, 10, out);
             out.flush();
             out.close();
             //Log.i("info2", "已经保存");
@@ -277,14 +251,13 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public String imageEncoder(String imageFilePath) {
-        Bitmap bm = BitmapFactory.decodeFile(imageFilePath);
+    public String imageEncoder(String compressedImageFilePath) {
+        Bitmap bm = BitmapFactory.decodeFile(compressedImageFilePath);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         bm.compress(Bitmap.CompressFormat.JPEG, 100, baos); //bm is the bitmap object
         byte[] b = baos.toByteArray();
         String encodedImage = Base64.encodeToString(b, Base64.NO_WRAP);
-        //Log.i("base64", encodedImage);
-        //return encodedImage;
+
         String base64String = null;
         try {
             base64String = URLEncoder.encode(encodedImage, "utf-8");
@@ -297,12 +270,9 @@ public class MainActivity extends AppCompatActivity {
     public void processPhoto(String imageFilePath){
         Log.i("info", "processing");
         Toast.makeText(this, "正在处理", Toast.LENGTH_LONG).show();
-        //Bitmap bm = compressPhoto(imageFilePath);
         compressPhoto(imageFilePath);
-        base64 = imageEncoder(imageFilePath);
+        base64 = imageEncoder(compressedImageFilePath);
         Log.i("info", "process complete");
-        //Toast.makeText(this, "process complete", Toast.LENGTH_LONG).show();
-        //OCR(base64);
     }
 
     public int tokenizer(String word) {
@@ -432,7 +402,7 @@ public class MainActivity extends AppCompatActivity {
 
         }
     }
-    
+
     MyHandler handler = new MyHandler(this);
 
     Runnable runnableOCR = new Runnable() {
@@ -441,7 +411,6 @@ public class MainActivity extends AppCompatActivity {
             Message msg = new Message();
             msg.what = OCR(base64);
             handler.sendMessage(msg);
-
         }
     };
 
@@ -465,24 +434,33 @@ public class MainActivity extends AppCompatActivity {
             //Log.i("database", picture.tag + ":" + picture.fileName);
             list.add(map);
         }
-        if(String.valueOf(list.size()).equals("0")){
+        if (String.valueOf(list.size()).equals("0")) {
             Toast.makeText(this, "无匹配，请缩短关键词", Toast.LENGTH_LONG).show();
+        } else {
+            Intent intent = new Intent(this, QueryActivity.class);
+            intent.putExtra("list", list);
+            startActivityForResult(intent, 2);
+        }
+    }
+
+    public void query(View view) {
+        List<Picture> pictures = mgr.query();
+        ArrayList<Map<String, String>> list = new ArrayList<Map<String, String>>();
+        for (Picture picture : pictures) {
+            HashMap<String, String> map = new HashMap<String, String>();
+            //map.put("tag", picture.tag);
+            String imagePath = appHome + "/" + picture.fileName + ".jpg";
+            map.put("imagePath", imagePath);
+            //Log.i("database", picture.tag + ":" + picture.fileName);
+            list.add(map);
+        }
+        if(String.valueOf(list.size()).equals("0")){
+            Toast.makeText(this, "数据库中无照片", Toast.LENGTH_LONG).show();
         }else{
             Intent intent = new Intent(this, QueryActivity.class);
             intent.putExtra("list", list);
             startActivityForResult(intent, 2);
         }
-//        SimpleAdapter adapter = new SimpleAdapter(this, list, R.layout.query,
-//                new String[]{"imagePath"}, new int[]{R.id.file});
-//        listView.setAdapter(adapter);
-
-//        String imagePath = appHome + "/" + list[1]filename + ".jpg";
-//        File imageFile = new File(imageFilePath);
-//        ImageView jpgView = (ImageView)findViewById(R.id.imageView);
-//        Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
-//        jpgView.setImageBitmap(bitmap);
     }
-
-
 
 }

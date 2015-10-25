@@ -57,7 +57,7 @@ public class DBManager {
     }
 
     /**
-     * query all pictures, return list
+     * query pictures, return list
      * @return List<Picture>
      */
     public List<Picture> query(String keyword) {
@@ -73,6 +73,24 @@ public class DBManager {
                 pictures.add(picture);
                 pictureArray.add(picture.fileName);
             }
+        }
+        c.close();
+        return pictures;
+    }
+
+    public List<Picture> query() {
+        ArrayList<Picture> pictures = new ArrayList<Picture>();
+        Cursor c = queryTheCursor();
+        ArrayList<String> pictureArray = new ArrayList<String> ();
+        while (c.moveToNext()) {
+            Picture picture = new Picture();
+            picture._id = c.getInt(c.getColumnIndex("_id"));
+            picture.tag = c.getString(c.getColumnIndex("tag"));
+            picture.fileName = c.getString(c.getColumnIndex("fileName"));
+
+            pictures.add(picture);
+            pictureArray.add(picture.fileName);
+
         }
         c.close();
         return pictures;
