@@ -104,8 +104,15 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+//        if (id == R.id.action_settings) {
+//            return true;
+//        }
+        switch(id) {
+            case R.id.action_settings:
+                return true;
+            case R.id.action_photo:
+                getPhoto();
+                break;
         }
 
         return super.onOptionsItemSelected(item);
@@ -118,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
     public String base64 = "";
     public String word;
 
-    public void getPhoto(View v) {
+    public void getPhoto() {
         Intent intent = new Intent();
         intent.setAction("android.media.action.IMAGE_CAPTURE");
         intent.addCategory("android.intent.category.DEFAULT");
