@@ -66,7 +66,6 @@ public class QueryActivity extends AppCompatActivity {
 
 class ItemClickListener implements AdapterView.OnItemClickListener
 {
-    //ImageView fullView = null;
 
     public void onItemClick(AdapterView<?> arg0,//The AdapterView where the click happened
                             View arg1,//The view within the AdapterView that was clicked
@@ -77,13 +76,10 @@ class ItemClickListener implements AdapterView.OnItemClickListener
         HashMap<String, String> item=(HashMap<String, String>) arg0.getItemAtPosition(arg2);
         //QueryActivity.imagePath = item.get("imagePath");
         Intent intent = new Intent(arg0.getContext(), PictureActivity.class);
-        intent.putExtra("imagePath", item.get("imagePath"));
+        String imagePath = item.get("imagePath");
+        imagePath = imagePath.substring(0, imagePath.length() - 6) + ".jpg";
+        intent.putExtra("imagePath", imagePath);
         arg0.getContext().startActivity(intent);
-
-//        fullView = (ImageView) arg0.findViewById(R.id.fullview);
-//        fullView.setImageURI(Uri.parse(item.get("imagePath")));
-//        fullView.setScaleType(ImageView.ScaleType.FIT_XY);
-//        fullView.setVisibility(View.VISIBLE);
     }
 
 

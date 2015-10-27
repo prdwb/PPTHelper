@@ -20,7 +20,10 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.EditText;
+import android.widget.GridView;
+import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -52,38 +55,20 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private DBManager mgr;
+    //GridView gridView_main = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        //listView = (ListView) findViewById(R.id.listView);
+        setContentView(R.layout.fragment_main);
         mgr = new DBManager(this);
 
-
-//        final EditText editText = (EditText) findViewById(R.id.search);
-//        final Button button5 = (Button) findViewById(R.id.button5);
-//        button5.setOnClickListener(new View.OnClickListener() {
-//            public void onClick(View v) {
-//                String keyword = editText.getText().toString();
-//                if(keyword.equals(""))
-//                    query(v);
-//                else
-//                    query(v, keyword);
-//            }
-//        });
-//
-//        editText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-//            @Override
-//            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-//                boolean handled = false;
-//                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-//                    query(v, editText.getText().toString());
-//                    handled = true;
-//                }
-//                return handled;
-//            }
-//        });
+        GridView gridView_main = (GridView) findViewById(R.id.gridView_main);
+        ArrayList<Map<String, String>> list = getAllPictures(new File(appHome));
+        SimpleAdapter adapter = new SimpleAdapter(this, list, R.layout.query,
+                new String[]{"imagePath"}, new int[]{R.id.file});
+        gridView_main.setAdapter(adapter);
+        gridView_main.setOnItemClickListener(new ItemClickListener());
     }
 
     @Override
@@ -125,6 +110,41 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private ArrayList<Map<String, String>> getAllPictures(File parentDir) {
+        ArrayList<Map<String, String>> list = new ArrayList<Map<String, String>>();
+        File[] files = parentDir.listFiles();
+        for (File file : files) {
+            if (file.getName().endsWith("_c.jpg")) {
+                HashMap<String, String> map = new HashMap<String, String>();
+                String imagePath = appHome + "/" + file.getName();
+                map.put("imagePath", imagePath);
+                list.add(map);
+            }
+        }
+        return list;
+    }
+
+    class ItemClickListener implements AdapterView.OnItemClickListener
+    {
+
+        public void onItemClick(AdapterView<?> arg0,//The AdapterView where the click happened
+                                View arg1,//The view within the AdapterView that was clicked
+                                int arg2,//The position of the view in the adapter
+                                long arg3//The row id of the item that was clicked
+        ) {
+            //在本例中arg2=arg3
+            HashMap<String, String> item=(HashMap<String, String>) arg0.getItemAtPosition(arg2);
+            //QueryActivity.imagePath = item.get("imagePath");
+            Intent intent = new Intent(arg0.getContext(), PictureActivity.class);
+            String imagePath = item.get("imagePath");
+            imagePath = imagePath.substring(0, imagePath.length() - 6) + ".jpg";
+            intent.putExtra("imagePath", imagePath);
+            arg0.getContext().startActivity(intent);
+        }
+
+
     }
 
     public String imageFilePath = "";
@@ -445,7 +465,7 @@ public class MainActivity extends AppCompatActivity {
         for (Picture picture : pictures) {
             HashMap<String, String> map = new HashMap<String, String>();
             //map.put("tag", picture.tag);
-            String imagePath = appHome + "/" + picture.fileName + ".jpg";
+            String imagePath = appHome + "/" + picture.fileName + "_c.jpg";
             map.put("imagePath", imagePath);
             //Log.i("database", picture.tag + ":" + picture.fileName);
             list.add(map);
