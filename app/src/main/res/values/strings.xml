@@ -6,4 +6,7 @@
     <string name="title_activity_picture">PictureActivity</string>
     <string name="action_search">搜索</string>
     <string name="action_photo">拍照</string>
+    <string name="dialog_search">搜索</string>
+    <string name="dialog_cancel">取消</string>
+    <string name="dialog_query">请输入关键字</string>
 </resources>

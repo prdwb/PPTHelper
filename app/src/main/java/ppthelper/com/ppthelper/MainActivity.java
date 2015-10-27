@@ -1,5 +1,8 @@
 package ppthelper.com.ppthelper;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -9,17 +12,15 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
+import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Base64;
 import android.util.Log;
-import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.inputmethod.EditorInfo;
-import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
@@ -46,6 +47,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+//import android.app.DialogFragment;
+
 
 public class MainActivity extends AppCompatActivity {
     private DBManager mgr;
@@ -57,29 +60,30 @@ public class MainActivity extends AppCompatActivity {
         //listView = (ListView) findViewById(R.id.listView);
         mgr = new DBManager(this);
 
-        final EditText editText = (EditText) findViewById(R.id.search);
-        final Button button5 = (Button) findViewById(R.id.button5);
-        button5.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                String keyword = editText.getText().toString();
-                if(keyword.equals(""))
-                    query(v);
-                else
-                    query(v, keyword);
-            }
-        });
 
-        editText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                boolean handled = false;
-                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                    query(v, editText.getText().toString());
-                    handled = true;
-                }
-                return handled;
-            }
-        });
+//        final EditText editText = (EditText) findViewById(R.id.search);
+//        final Button button5 = (Button) findViewById(R.id.button5);
+//        button5.setOnClickListener(new View.OnClickListener() {
+//            public void onClick(View v) {
+//                String keyword = editText.getText().toString();
+//                if(keyword.equals(""))
+//                    query(v);
+//                else
+//                    query(v, keyword);
+//            }
+//        });
+//
+//        editText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+//            @Override
+//            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+//                boolean handled = false;
+//                if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+//                    query(v, editText.getText().toString());
+//                    handled = true;
+//                }
+//                return handled;
+//            }
+//        });
     }
 
     @Override
@@ -112,6 +116,11 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             case R.id.action_photo:
                 getPhoto();
+                break;
+            case R.id.action_search:
+                QueryDialogFragment query = new QueryDialogFragment();
+                //query.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+                query.show(getSupportFragmentManager(), "query");
                 break;
         }
 
@@ -197,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public int OCR(String base64) {
-        String httpUrl = "http://apis.baidu.com/apistore/idlocr/ocr";
+        String httpUrl = "http://apis.baidu.com/idl_baidu/baiduocrpay/idlocrpaid";
         String httpArg = "fromdevice=android&clientip=222.26.211.5&detecttype=Recognize&languagetype=CHN_ENG&imagetype=1&image=" + base64;
         //Log.i("httpArg", httpArg);
         String jsonResult = request(httpUrl, httpArg);
@@ -362,7 +371,7 @@ public class MainActivity extends AppCompatActivity {
     public static final int TOKENIZER_REQUEST_FAIL = 16;
     public static final int TOKENIZER_SUCCESS = 17;
 
-    static class MyHandler extends Handler{
+    private static class MyHandler extends Handler{
         WeakReference<MainActivity> mActivity;
 
         MyHandler(MainActivity activity) {
@@ -430,7 +439,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    public void query(View view, String keyword) {
+    public void query(String keyword) {
         List<Picture> pictures = mgr.query(keyword);
         ArrayList<Map<String, String>> list = new ArrayList<Map<String, String>>();
         for (Picture picture : pictures) {
@@ -467,6 +476,32 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(this, QueryActivity.class);
             intent.putExtra("list", list);
             startActivityForResult(intent, 2);
+        }
+    }
+
+    public class QueryDialogFragment extends DialogFragment {
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            // Use the Builder class for convenient dialog construction
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            LayoutInflater inflater = getActivity().getLayoutInflater();
+            final View queryView = inflater.inflate(R.layout.dialog_query, null);
+            builder.setView(queryView)
+                    .setTitle(R.string.dialog_query)
+                    .setPositiveButton(R.string.dialog_search, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            EditText dialog_keyword = (EditText) queryView.findViewById(R.id.dialog_query);
+                            String keyword = dialog_keyword.getText().toString();
+                            query(keyword);
+                        }
+                    })
+                    .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            QueryDialogFragment.this.getDialog().cancel();
+                        }
+                    });
+            // Create the AlertDialog object and return it
+            return builder.create();
         }
     }
 
