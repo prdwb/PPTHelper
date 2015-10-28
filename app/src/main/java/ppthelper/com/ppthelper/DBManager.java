@@ -78,22 +78,23 @@ public class DBManager {
         return pictures;
     }
 
-    public List<Picture> query() {
-        ArrayList<Picture> pictures = new ArrayList<Picture>();
+    public ArrayList<String> queryTag(String keyword) {
+        ArrayList<String> tagList = new ArrayList<String> ();
         Cursor c = queryTheCursor();
-        ArrayList<String> pictureArray = new ArrayList<String> ();
+
         while (c.moveToNext()) {
             Picture picture = new Picture();
             picture._id = c.getInt(c.getColumnIndex("_id"));
             picture.tag = c.getString(c.getColumnIndex("tag"));
             picture.fileName = c.getString(c.getColumnIndex("fileName"));
 
-            pictures.add(picture);
-            pictureArray.add(picture.fileName);
+            if(picture.fileName.equals(keyword) && !tagList.contains(picture.tag)) {
+                tagList.add(picture.tag);
+            }
 
         }
         c.close();
-        return pictures;
+        return tagList;
     }
 
     /**

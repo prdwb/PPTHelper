@@ -63,12 +63,18 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.fragment_main);
         mgr = new DBManager(this);
 
+        File dir = new File(appHome);
+        if (!dir.exists()){
+            dir.mkdir();
+        }
+
         GridView gridView_main = (GridView) findViewById(R.id.gridView_main);
         ArrayList<Map<String, String>> list = getAllPictures(new File(appHome));
         SimpleAdapter adapter = new SimpleAdapter(this, list, R.layout.query,
                 new String[]{"imagePath"}, new int[]{R.id.file});
         gridView_main.setAdapter(adapter);
         gridView_main.setOnItemClickListener(new ItemClickListener());
+        gridView_main.setOnItemLongClickListener(new ItemLongClickListener());
     }
 
     @Override
@@ -144,7 +150,32 @@ public class MainActivity extends AppCompatActivity {
             arg0.getContext().startActivity(intent);
         }
 
+    }
 
+    class ItemLongClickListener implements AdapterView.OnItemLongClickListener {
+        public boolean onItemLongClick(AdapterView<?> arg0,//The AdapterView where the click happened
+                                       View arg1,//The view within the AdapterView that was clicked
+                                       int arg2,//The position of the view in the adapter
+                                       long arg3//The row id of the item that was clicked
+        ) {
+            HashMap<String, String> item=(HashMap<String, String>) arg0.getItemAtPosition(arg2);
+            String imagePath = item.get("imagePath");
+            String[] array = imagePath.split("/");
+            String filename = array[array.length - 1];
+            filename = filename.substring(0, filename.length() - 6);
+            ArrayList<String> tags = mgr.queryTag(filename);
+
+            if(String.valueOf(tags.size()).equals("0")){
+                tagMessage = "无标签";
+            }else{
+                tagMessage = "";
+                for (String tag : tags)
+                    tagMessage += (tag + " ");
+            }
+            TagDialogFragment tagDialog = new TagDialogFragment();
+            tagDialog.show(getSupportFragmentManager(), "tag");
+            return true;
+        }
     }
 
     public String imageFilePath = "";
@@ -153,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
     public String appHome = Environment.getExternalStorageDirectory().getAbsolutePath() + "/PPTHelper";
     public String base64 = "";
     public String word;
+    public String tagMessage;
 
     public void getPhoto() {
         Intent intent = new Intent();
@@ -168,10 +200,7 @@ public class MainActivity extends AppCompatActivity {
         int second = calendar.get(Calendar.SECOND);
         filename = "" + year + month + date + hour + minute + second;
 
-        File dir = new File(appHome);
-        if (!dir.exists()){
-            dir.mkdir();
-        }
+
         imageFilePath = appHome + "/" + filename + ".jpg";
         compressedImageFilePath = appHome + "/" + filename + "_c" + ".jpg";
         File file = new File(imageFilePath);
@@ -264,7 +293,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void compressPhoto(String imageFilePath){
         final BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inSampleSize = 3;
+        options.inSampleSize = 4;
         Bitmap bm = BitmapFactory.decodeFile(imageFilePath, options);
 
         File f = new File(compressedImageFilePath);
@@ -479,25 +508,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void query(View view) {
-        List<Picture> pictures = mgr.query();
-        ArrayList<Map<String, String>> list = new ArrayList<Map<String, String>>();
-        for (Picture picture : pictures) {
-            HashMap<String, String> map = new HashMap<String, String>();
-            //map.put("tag", picture.tag);
-            String imagePath = appHome + "/" + picture.fileName + ".jpg";
-            map.put("imagePath", imagePath);
-            //Log.i("database", picture.tag + ":" + picture.fileName);
-            list.add(map);
-        }
-        if(String.valueOf(list.size()).equals("0")){
-            Toast.makeText(this, "数据库中无照片", Toast.LENGTH_LONG).show();
-        }else{
-            Intent intent = new Intent(this, QueryActivity.class);
-            intent.putExtra("list", list);
-            startActivityForResult(intent, 2);
-        }
-    }
 
     public class QueryDialogFragment extends DialogFragment {
         @Override
@@ -518,6 +528,23 @@ public class MainActivity extends AppCompatActivity {
                     .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int id) {
                             QueryDialogFragment.this.getDialog().cancel();
+                        }
+                    });
+            // Create the AlertDialog object and return it
+            return builder.create();
+        }
+    }
+
+    public class TagDialogFragment extends DialogFragment {
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            // Use the Builder class for convenient dialog construction
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            builder.setTitle(R.string.dialog_tag)
+                    .setMessage(tagMessage)
+                    .setPositiveButton(R.string.dialog_OK, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            TagDialogFragment.this.getDialog().cancel();
                         }
                     });
             // Create the AlertDialog object and return it

@@ -25,7 +25,8 @@
         </activity>
         <activity
             android:name=".PictureActivity"
-            android:label="@string/title_activity_picture" >
+            android:label="@string/title_activity_picture"
+            android:theme="@style/Theme.AppCompat.NoActionBar" >
         </activity>
     </application>
 
