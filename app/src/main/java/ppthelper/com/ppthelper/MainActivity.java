@@ -61,6 +61,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.fragment_main);
+
+//        // Retrieve the AppCompact Toolbar
+//        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+//        setSupportActionBar(toolbar);
+//
+//        // Set the padding to match the Status Bar height
+//        toolbar.setPadding(0, getStatusBarHeight(), 0, 0);
+
         mgr = new DBManager(this);
 
         File dir = new File(appHome);
@@ -551,5 +559,14 @@ public class MainActivity extends AppCompatActivity {
             return builder.create();
         }
     }
+
+//    public int getStatusBarHeight() {
+//        int result = 0;
+//        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+//        if (resourceId > 0) {
+//            result = getResources().getDimensionPixelSize(resourceId);
+//        }
+//        return result;
+//    }
 
 }
